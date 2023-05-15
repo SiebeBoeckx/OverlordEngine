@@ -18,6 +18,7 @@ public:
 
 	//RENDERING
 	static void Draw(const SceneContext& sceneContext);
+	static void DrawRay(const XMFLOAT3& start, const XMFLOAT3& direction, float size = 1.0f, const XMFLOAT4& color = XMFLOAT4{ Colors::Orange });
 	static void DrawLine(const XMFLOAT3& start, const XMFLOAT3& end, const XMFLOAT4& color = XMFLOAT4{ Colors::Orange });
 	static void DrawLine(const XMFLOAT3& start, const XMFLOAT4& colorStart, const XMFLOAT3& end, const XMFLOAT4& colorEnd);
 	static void DrawPhysX(PxScene* pScene);

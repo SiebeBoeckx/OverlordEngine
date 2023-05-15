@@ -11,8 +11,147 @@ GeoCharacter::GeoCharacter(const CharacterDesc& characterDesc)
 
 void GeoCharacter::Initialize(const SceneContext& /*sceneContext*/)
 {
+	//tempbox
+
+	/*const auto xCube = AddChild(new CubePrefab(1,1,1));
+	xCube->GetTransform()->Translate(1, 0, 0);
+
+	const auto yCube = AddChild(new CubePrefab(1, 1, 1, static_cast<XMFLOAT4>(Colors::Green)));
+	yCube->GetTransform()->Translate(0, 1, 0);
+
+	const auto zCube = AddChild(new CubePrefab(1, 1, 1, static_cast<XMFLOAT4>(Colors::Blue)));
+	zCube->GetTransform()->Translate(0, 0, 1);*/
+
+	pOrientationCube = AddChild(new CubePrefab(1, 1, 1));
+	pOrientationCube->GetTransform()->Rotate(0, 0, -90);
+}
+
+void GeoCharacter::Update(const SceneContext& /*sceneContext*/)
+{
+	
+		////Rotate gameObject with gravVector
+		////Retrieve the TransformComponent
+		//
+		m_GravVector.x = m_pControllerComponent->GetFootPosition().x - m_GravPoint.x;
+		m_GravVector.y = m_pControllerComponent->GetFootPosition().y - m_GravPoint.y;
+		m_GravVector.z = m_pControllerComponent->GetFootPosition().z - m_GravPoint.z;
+		
+
+		// Rotate the object to align with the gravity vector
+		XMVECTOR gravVector = XMLoadFloat3(&m_GravVector);
+		gravVector = XMVector3Normalize(gravVector);
+		m_pControllerComponent->SetUpVector(m_GravVector);
+
+		// Calculate an orthonormal basis from the gravity vector
+		//XMVECTOR up = gravVector;
+
+		//XMVECTOR right = XMVector3Cross(up, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f));
+		//XMVECTOR forward = XMVector3Cross(right, up);
+
+		XMVECTOR right = XMLoadFloat3(&pOrientationCube->GetTransform()->GetRight());
+		XMVECTOR forward = XMLoadFloat3(&pOrientationCube->GetTransform()->GetForward());
+		XMVECTOR up = XMLoadFloat3(&pOrientationCube->GetTransform()->GetUp());
+
+		DebugRenderer::DrawRay(pOrientationCube->GetTransform()->GetWorldPosition(), pOrientationCube->GetTransform()->GetForward(), 6, XMFLOAT4{ Colors::Blue });
+		DebugRenderer::DrawRay(pOrientationCube->GetTransform()->GetWorldPosition(), pOrientationCube->GetTransform()->GetUp(), 6, XMFLOAT4{ Colors::Green });
+		DebugRenderer::DrawRay(pOrientationCube->GetTransform()->GetWorldPosition(), pOrientationCube->GetTransform()->GetRight(), 6, XMFLOAT4{Colors::Red});
+
+		//XMFLOAT3 rightF{};
+		//XMStoreFloat3(&rightF, right);
+		//XMFLOAT3 forwardF{};
+		//XMStoreFloat3(&forwardF, forward);
+
+		//std::cout	<< m_pControllerComponent->GetTransform()->GetUp().x << ','
+		//			<< m_pControllerComponent->GetTransform()->GetUp().y << ','
+		//			<< m_pControllerComponent->GetTransform()->GetUp().z << '\n';
+
+		//************************
+		//GATHERING TRANSFORM INFO
+
+		auto deltaT = GetScene()->GetSceneContext().pGameTime->GetElapsed();
+
+		//Retrieve the forward & right vector (as XMVECTOR) from the TransformComponent
+		//XMVECTOR forward = XMLoadFloat3(&m_pControllerComponent->GetTransform()->GetForward());
+		//XMVECTOR right = XMLoadFloat3(&m_pControllerComponent->GetTransform()->GetUp());
+		//right *= -1;
+
+		//********
+		//MOVEMENT
+
+		XMVECTOR totalVelocity{};
+
+		//Now we can calculate the Horizontal Velocity which should be stored in m_TotalVelocity.xz
+		//Calculate the horizontal velocity (m_CurrentDirection * MoveSpeed)
+		//auto horizontalVelocity = XMLoadFloat3(&m_CurrentDirection) * m_MoveSpeed;
+		//XMFLOAT3 horVel{};
+		//XMStoreFloat3(&horVel, horizontalVelocity);
+		//Set the x/z component of m_TotalVelocity (horizontal_velocity x/z)
+		//m_TotalVelocity = horVel;
+		//It's important that you don't overwrite the y component of m_TotalVelocity (contains the vertical velocity)
+
+		//## Vertical Movement (Jump/Fall)
+		//If the Controller Component is NOT grounded (= freefall)
+		if (m_pControllerComponent->GetCollisionFlags() != PxControllerCollisionFlag::eCOLLISION_DOWN)
+		{
+			//XMVECTOR up = XMLoadFloat3(&m_pControllerComponent->GetTransform()->GetRight());
+			//Decrease the y component of m_TotalVelocity with a fraction (ElapsedTime) of the Fall Acceleration (m_FallAcceleration)
+			//XMVECTOR tempTotalVel = XMLoadFloat3(&m_TotalVelocity);
+			//tempTotalVel -= up * m_FallAcceleration * deltaT;
+			//XMStoreFloat3(&m_TotalVelocity, tempTotalVel);
+			//moveDirection += up * m_TotalVelocity.y;
+			//Make sure that the minimum speed stays above -CharacterDesc::maxFallSpeed (negative!)
+			//if (m_TotalVelocity.y < -m_CharacterDesc.maxFallSpeed)
+			//{
+			//	m_TotalVelocity.y = -m_CharacterDesc.maxFallSpeed;
+			//}
+
+			m_currFallSpeed -= m_FallAcceleration * deltaT;
+			if (m_currFallSpeed < -m_CharacterDesc.maxFallSpeed)
+			{
+				m_currFallSpeed = -m_CharacterDesc.maxFallSpeed;
+			}
+
+			totalVelocity += up * m_currFallSpeed;
+		}
+		//Else (=Character is grounded, no input pressed)
+		else
+		{
+			//m_TotalVelocity.y is zero
+			//m_TotalVelocity.y = -0.1f;
+			m_currFallSpeed = -0.1f;
+		}
+
+		//************
+		//DISPLACEMENT
+
+		//The displacement required to move the Character Controller (ControllerComponent::Move) can be calculated using our TotalVelocity (m/s)
+		//auto vel = XMLoadFloat3(&m_TotalVelocity);
+		totalVelocity *= deltaT; //velocity (m/s) * elapsedTime(s) = displacement (m)
+		XMFLOAT3 displacement{};
+		XMStoreFloat3(&displacement, totalVelocity);
+		//Calculate the displacement (m) for the current frame and move the ControllerComponent
+		m_pControllerComponent->Move(displacement);
+
+		//The above is a simple implementation of Movement Dynamics, adjust the code to further improve the movement logic and behaviour.
+		//Also, it can be usefull to use a seperate RayCast to check if the character is grounded (more responsive)
+
+}
+
+
+#pragma region Player
+
+PlayerCharacter::PlayerCharacter(const CharacterDesc& characterDesc)
+	:GeoCharacter(characterDesc)
+	, m_CharacterDesc{ characterDesc }
+	, m_MoveAcceleration(characterDesc.maxMoveSpeed / characterDesc.moveAccelerationTime)
+	, m_FallAcceleration(characterDesc.maxFallSpeed / characterDesc.fallAccelerationTime)
+{}
+
+void PlayerCharacter::Initialize(const SceneContext& /*sceneContext*/)
+{
 	//Controller
 	m_pControllerComponent = AddComponent(new ControllerComponent(m_CharacterDesc.controller));
+	m_pControllerComponent->GetPxController()->setSlopeLimit(1000.f);
 
 	//Camera
 	const auto pCamera = AddChild(new FixedCamera());
@@ -24,26 +163,29 @@ void GeoCharacter::Initialize(const SceneContext& /*sceneContext*/)
 
 	//tempbox
 
-	const auto xCube = AddChild(new CubePrefab(1,1,1));
+	/*const auto xCube = AddChild(new CubePrefab(1,1,1));
 	xCube->GetTransform()->Translate(1, 0, 0);
 
 	const auto yCube = AddChild(new CubePrefab(1, 1, 1, static_cast<XMFLOAT4>(Colors::Green)));
 	yCube->GetTransform()->Translate(0, 1, 0);
 
 	const auto zCube = AddChild(new CubePrefab(1, 1, 1, static_cast<XMFLOAT4>(Colors::Blue)));
-	zCube->GetTransform()->Translate(0, 0, 1);
+	zCube->GetTransform()->Translate(0, 0, 1);*/
+
+	pOrientationCube = AddChild(new CubePrefab(1, 1, 1));
+	pOrientationCube->GetTransform()->Rotate(0, 0, -90);
 }
 
-void GeoCharacter::Update(const SceneContext& /*sceneContext*/)
+void PlayerCharacter::Update(const SceneContext& /*sceneContext*/)
 {
 	if (m_pCameraComponent->IsActive())
 	{
 		////Rotate gameObject with gravVector
 		////Retrieve the TransformComponent
 		//
-		//m_GravVector.x = m_pControllerComponent->GetFootPosition().x - m_GravPoint.x;
-		//m_GravVector.y = m_pControllerComponent->GetFootPosition().y - m_GravPoint.y;
-		//m_GravVector.z = m_pControllerComponent->GetFootPosition().z - m_GravPoint.z;
+		m_GravVector.x = m_pControllerComponent->GetFootPosition().x - m_GravPoint.x;
+		m_GravVector.y = m_pControllerComponent->GetFootPosition().y - m_GravPoint.y;
+		m_GravVector.z = m_pControllerComponent->GetFootPosition().z - m_GravPoint.z;
 		//
 		//if (m_pControllerComponent->GetTransform()->GetUp().x != m_GravVector.x
 		//	|| m_pControllerComponent->GetTransform()->GetUp().y != m_GravVector.y
@@ -73,15 +215,31 @@ void GeoCharacter::Update(const SceneContext& /*sceneContext*/)
 		m_pControllerComponent->SetUpVector(m_GravVector);
 
 		// Calculate an orthonormal basis from the gravity vector
-		XMVECTOR up = gravVector;
-		//XMVECTOR right = XMVector3Orthogonal(gravVector, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-		//if (XMVector3Equal(right, XMVectorZero()))
-		//{
-		//	right = XMVector3Orthogonal(gravVector, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f));
-		//}
-		//right = XMVector3Normalize(right);
-		//XMVECTOR forward = XMVector3Cross(up, right);
+		//XMVECTOR up = gravVector;
 
+		//XMVECTOR right = XMVector3Cross(up, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f));
+		//XMVECTOR forward = XMVector3Cross(right, up);
+
+		XMVECTOR right = XMLoadFloat3(&pOrientationCube->GetTransform()->GetRight());
+		XMVECTOR forward = XMLoadFloat3(&pOrientationCube->GetTransform()->GetForward());
+		XMVECTOR up = XMLoadFloat3(&pOrientationCube->GetTransform()->GetUp());
+
+		DebugRenderer::DrawRay(pOrientationCube->GetTransform()->GetWorldPosition(), pOrientationCube->GetTransform()->GetForward(), 6, XMFLOAT4{ Colors::Blue });
+		DebugRenderer::DrawRay(pOrientationCube->GetTransform()->GetWorldPosition(), pOrientationCube->GetTransform()->GetUp(), 6, XMFLOAT4{ Colors::Green });
+		DebugRenderer::DrawRay(pOrientationCube->GetTransform()->GetWorldPosition(), pOrientationCube->GetTransform()->GetRight(), 6, XMFLOAT4{ Colors::Red });
+
+		//XMFLOAT3 rightF{};
+		//XMStoreFloat3(&rightF, right);
+		//XMFLOAT3 forwardF{};
+		//XMStoreFloat3(&forwardF, forward);
+
+		//std::cout	<< m_pControllerComponent->GetTransform()->GetUp().x << ','
+		//			<< m_pControllerComponent->GetTransform()->GetUp().y << ','
+		//			<< m_pControllerComponent->GetTransform()->GetUp().z << '\n';
+
+		//m_pControllerComponent->GetTransform()->SetUpVector(m_GravVector);
+		//m_pControllerComponent->GetTransform()->SetRightVector(rightF);
+		//m_pControllerComponent->GetTransform()->SetForwardVector(forwardF);
 		//***************
 		//HANDLE INPUT
 
@@ -91,7 +249,7 @@ void GeoCharacter::Update(const SceneContext& /*sceneContext*/)
 		auto pInput = GetScene()->GetSceneContext().pInput;
 
 		//## Input Gathering (move)
-		XMFLOAT2 move{0.f,0.f}; //Uncomment
+		XMFLOAT2 move{ 0.f,0.f }; //Uncomment
 		bool isMoving{ false };
 
 		auto leftThumbstick = pInput->GetThumbstickPosition();
@@ -108,7 +266,7 @@ void GeoCharacter::Update(const SceneContext& /*sceneContext*/)
 			isMoving = true;
 		}
 		//Optional: if move.y is near zero (abs(move.y) < epsilon), you could use the ThumbStickPosition.y for movement
-		if(abs(leftThumbstick.y) > epsilon)
+		if (abs(leftThumbstick.y) > epsilon)
 		{
 			move.y = leftThumbstick.y;
 			isMoving = true;
@@ -138,9 +296,9 @@ void GeoCharacter::Update(const SceneContext& /*sceneContext*/)
 		auto deltaT = GetScene()->GetSceneContext().pGameTime->GetElapsed();
 
 		//Retrieve the forward & right vector (as XMVECTOR) from the TransformComponent
-		XMVECTOR forward = XMLoadFloat3(&m_pControllerComponent->GetTransform()->GetForward());
-		XMVECTOR right = XMLoadFloat3(&m_pControllerComponent->GetTransform()->GetUp());
-		right *= -1;
+		//XMVECTOR forward = XMLoadFloat3(&m_pControllerComponent->GetTransform()->GetForward());
+		//XMVECTOR right = XMLoadFloat3(&m_pControllerComponent->GetTransform()->GetUp());
+		//right *= -1;
 
 		//********
 		//MOVEMENT
@@ -150,15 +308,14 @@ void GeoCharacter::Update(const SceneContext& /*sceneContext*/)
 		auto currentMoveAcc = m_MoveAcceleration * deltaT;
 		//If the character is moving (= input is pressed)
 		// Calculate the movement direction based on the input and the new basis
-		XMVECTOR moveDirection = forward * move.y + right * move.x;
-		moveDirection = XMVector3Normalize(moveDirection);
+		XMVECTOR moveDirection{};
 		if (isMoving)
 		{
 			//Calculate & Store the current direction (m_CurrentDirection) >> based on the forward/right vectors and the pressed input
 			moveDirection += forward * move.y;
 			moveDirection += right * move.x;
 
-			XMStoreFloat3(&m_CurrentDirection, moveDirection);
+			//XMStoreFloat3(&m_CurrentDirection, XMVector3Normalize(moveDirection));
 			//Increase the current MoveSpeed with the current Acceleration (m_MoveSpeed)
 			m_MoveSpeed += currentMoveAcc;
 			//Make sure the current MoveSpeed stays below the maximum MoveSpeed (CharacterDesc::maxMoveSpeed)
@@ -179,14 +336,15 @@ void GeoCharacter::Update(const SceneContext& /*sceneContext*/)
 			}
 		}
 
+		XMVECTOR totalVelocity = moveDirection * m_MoveSpeed;
+
 		//Now we can calculate the Horizontal Velocity which should be stored in m_TotalVelocity.xz
 		//Calculate the horizontal velocity (m_CurrentDirection * MoveSpeed)
-		auto horizontalVelocity = XMLoadFloat3(&m_CurrentDirection) * m_MoveSpeed;
-		XMFLOAT3 horVel{};
-		XMStoreFloat3(&horVel, horizontalVelocity);
+		//auto horizontalVelocity = XMLoadFloat3(&m_CurrentDirection) * m_MoveSpeed;
+		//XMFLOAT3 horVel{};
+		//XMStoreFloat3(&horVel, horizontalVelocity);
 		//Set the x/z component of m_TotalVelocity (horizontal_velocity x/z)
-		m_TotalVelocity.x = horVel.x;
-		m_TotalVelocity.z = horVel.z;
+		//m_TotalVelocity = horVel;
 		//It's important that you don't overwrite the y component of m_TotalVelocity (contains the vertical velocity)
 
 		//## Vertical Movement (Jump/Fall)
@@ -195,37 +353,40 @@ void GeoCharacter::Update(const SceneContext& /*sceneContext*/)
 		{
 			//XMVECTOR up = XMLoadFloat3(&m_pControllerComponent->GetTransform()->GetRight());
 			//Decrease the y component of m_TotalVelocity with a fraction (ElapsedTime) of the Fall Acceleration (m_FallAcceleration)
-			XMVECTOR tempTotalVel = XMLoadFloat3(&m_TotalVelocity);
-			tempTotalVel -= up * m_FallAcceleration * deltaT;
-			XMStoreFloat3(&m_TotalVelocity, tempTotalVel);
+			//XMVECTOR tempTotalVel = XMLoadFloat3(&m_TotalVelocity);
+			//tempTotalVel -= up * m_FallAcceleration * deltaT;
+			//XMStoreFloat3(&m_TotalVelocity, tempTotalVel);
 			//moveDirection += up * m_TotalVelocity.y;
 			//Make sure that the minimum speed stays above -CharacterDesc::maxFallSpeed (negative!)
-			if (m_TotalVelocity.y < -m_CharacterDesc.maxFallSpeed)
+			//if (m_TotalVelocity.y < -m_CharacterDesc.maxFallSpeed)
+			//{
+			//	m_TotalVelocity.y = -m_CharacterDesc.maxFallSpeed;
+			//}
+
+			m_currFallSpeed -= m_FallAcceleration * deltaT;
+			if (m_currFallSpeed < -m_CharacterDesc.maxFallSpeed)
 			{
-				m_TotalVelocity.y = -m_CharacterDesc.maxFallSpeed;
+				m_currFallSpeed = -m_CharacterDesc.maxFallSpeed;
 			}
-		}
-		//Else If the jump action is triggered
-		else if (pInput->IsActionTriggered(m_CharacterDesc.actionId_Jump))
-		{
-			//Set m_TotalVelocity.y equal to CharacterDesc::JumpSpeed
-			m_TotalVelocity.y = m_CharacterDesc.JumpSpeed;
+
+			totalVelocity += up * m_currFallSpeed;
 		}
 		//Else (=Character is grounded, no input pressed)
 		else
 		{
 			//m_TotalVelocity.y is zero
-			m_TotalVelocity.y = -0.1f;
+			//m_TotalVelocity.y = -0.1f;
+			m_currFallSpeed = -0.1f;
 		}
 
 		//************
 		//DISPLACEMENT
 
 		//The displacement required to move the Character Controller (ControllerComponent::Move) can be calculated using our TotalVelocity (m/s)
-		auto vel = XMLoadFloat3(&m_TotalVelocity);
-		vel *= deltaT; //velocity (m/s) * elapsedTime(s) = displacement (m)
+		//auto vel = XMLoadFloat3(&m_TotalVelocity);
+		totalVelocity *= deltaT; //velocity (m/s) * elapsedTime(s) = displacement (m)
 		XMFLOAT3 displacement{};
-		XMStoreFloat3(&displacement, vel);
+		XMStoreFloat3(&displacement, totalVelocity);
 		//Calculate the displacement (m) for the current frame and move the ControllerComponent
 		m_pControllerComponent->Move(displacement);
 
@@ -233,3 +394,5 @@ void GeoCharacter::Update(const SceneContext& /*sceneContext*/)
 		//Also, it can be usefull to use a seperate RayCast to check if the character is grounded (more responsive)
 	}
 }
+
+#pragma endregion

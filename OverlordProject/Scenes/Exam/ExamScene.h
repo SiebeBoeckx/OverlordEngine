@@ -1,5 +1,5 @@
 #pragma once
-class GeoCharacter;
+class PlayerCharacter;
 
 class ExamScene : public GameScene
 {
@@ -22,9 +22,8 @@ private:
 		CharacterMoveRight,
 		CharacterMoveForward,
 		CharacterMoveBackward,
-		CharacterJump
 	};
 
-	GeoCharacter* m_pCharacter{};
+	PlayerCharacter* m_pCharacter{};
 };
 

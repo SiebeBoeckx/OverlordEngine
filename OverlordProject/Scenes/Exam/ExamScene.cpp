@@ -19,9 +19,8 @@ void ExamScene::Initialize()
 	characterDesc.actionId_MoveBackward = CharacterMoveBackward;
 	characterDesc.actionId_MoveLeft = CharacterMoveLeft;
 	characterDesc.actionId_MoveRight = CharacterMoveRight;
-	characterDesc.actionId_Jump = CharacterJump;
 
-	m_pCharacter = AddChild(new GeoCharacter(characterDesc));
+	m_pCharacter = AddChild(new PlayerCharacter(characterDesc));
 	m_pCharacter->GetTransform()->Translate(0.f, 30.f, 0.f);
 
 	//World sphere
@@ -45,9 +44,6 @@ void ExamScene::Initialize()
 	m_SceneContext.pInput->AddInputAction(inputAction);
 
 	inputAction = InputAction(CharacterMoveBackward, InputState::down, 'S');
-	m_SceneContext.pInput->AddInputAction(inputAction);
-
-	inputAction = InputAction(CharacterJump, InputState::pressed, VK_SPACE, -1, XINPUT_GAMEPAD_A);
 	m_SceneContext.pInput->AddInputAction(inputAction);
 }
 

@@ -33,4 +33,42 @@ private:
 
 	XMFLOAT3 m_GravPoint{};
 	XMFLOAT3 m_GravVector{};
+
+	GameObject* pOrientationCube{ nullptr };
+	float m_currFallSpeed{};
+};
+
+class PlayerCharacter : public GeoCharacter
+{
+public:
+	PlayerCharacter(const CharacterDesc& characterDesc);
+	~PlayerCharacter() override = default;
+
+	PlayerCharacter(const PlayerCharacter& other) = delete;
+	PlayerCharacter(PlayerCharacter&& other) noexcept = delete;
+	PlayerCharacter& operator=(const PlayerCharacter& other) = delete;
+	PlayerCharacter& operator=(PlayerCharacter&& other) noexcept = delete;
+
+protected:
+	void Initialize(const SceneContext&) override;
+	void Update(const SceneContext&) override;
+
+private:
+	CameraComponent* m_pCameraComponent{};
+	ControllerComponent* m_pControllerComponent{};
+
+	CharacterDesc m_CharacterDesc;
+	float m_TotalPitch{}, m_TotalYaw{};				//Total camera Pitch(X) and Yaw(Y) rotation
+	float m_MoveAcceleration{},						//Acceleration required to reach maxMoveVelocity after 1 second (maxMoveVelocity / moveAccelerationTime)
+		m_FallAcceleration{},						//Acceleration required to reach maxFallVelocity after 1 second (maxFallVelocity / fallAccelerationTime)
+		m_MoveSpeed{};								//MoveSpeed > Horizontal Velocity = MoveDirection * MoveVelocity (= TotalVelocity.xz)
+
+	XMFLOAT3 m_TotalVelocity{};						//TotalVelocity with X/Z for Horizontal Movement AND Y for Vertical Movement (fall/jump)
+	XMFLOAT3 m_CurrentDirection{};					//Current/Last Direction based on Camera forward/right (Stored for deacceleration)
+
+	XMFLOAT3 m_GravPoint{};
+	XMFLOAT3 m_GravVector{};
+
+	GameObject* pOrientationCube{ nullptr };
+	float m_currFallSpeed{};
 };

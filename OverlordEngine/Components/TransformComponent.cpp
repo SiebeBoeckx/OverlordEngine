@@ -63,6 +63,10 @@ void TransformComponent::UpdateTransforms()
 		if (isSet(m_IsTransformChanged, TransformChanged::TRANSLATION)) m_pControllerComponent->Translate(m_Position);
 		else m_Position = m_pControllerComponent->GetPosition();
 
+		//auto pxRot = m_pControllerComponent->GetPxController()->getActor()->getGlobalPose().q;
+		//auto pxForward = pxRot.rotate(PxVec3{ 0,0,1 });
+		//pxRot *= PxQuat(-PxPiDivTwo, pxForward);
+		//m_Rotation = PhysxHelper::ToXMFloat4(pxRot);
 		m_Rotation = PhysxHelper::ToXMFloat4(m_pControllerComponent->GetPxController()->getActor()->getGlobalPose().q);
 	}
 

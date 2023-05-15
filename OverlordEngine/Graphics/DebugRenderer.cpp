@@ -207,3 +207,15 @@ void DebugRenderer::Draw(const SceneContext& sceneContext)
 	DrawDRG(sceneContext, m_PhysXDRG);
 	DrawDRG(sceneContext, m_UserDRG);
 }
+
+void DebugRenderer::DrawRay(const XMFLOAT3& start, const XMFLOAT3& direction, float size, const XMFLOAT4& color)
+{
+	auto dirV = XMLoadFloat3(&direction);
+	auto startV = XMLoadFloat3(&start);
+	auto endV = startV + (XMVector3Normalize(dirV) * size);
+
+	XMFLOAT3 end{};
+	XMStoreFloat3(&end, endV);
+	DrawLine(start, end, color);
+}
+
